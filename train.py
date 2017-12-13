@@ -18,7 +18,7 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 
-IM_SIZE = (160, 160)
+IM_SIZE = (75, 75)
 
 
 def imread(path):
@@ -77,13 +77,29 @@ vgg = VGG16(
 )
 
 
-partial_vgg = vgg.get_layer('block5_pool').output
-model = GlobalMaxPooling2D()(partial_vgg)
+partial_vgg = vgg.get_layer('block2_pool').output
+
+model = Conv2D(64, (3, 3), activation='elu')(partial_vgg)
+model = Conv2D(64, (3, 3), activation='elu')(model)
+model = MaxPooling2D((2, 2))(model)
+
+model = Conv2D(64, (3, 3), activation='elu')(model)
+model = Conv2D(64, (3, 3), activation='elu')(model)
+model = MaxPooling2D((2, 2))(model)
+
+model = Flatten()(model)
+
+model = Dropout(.25)(model)
 model = Dense(len(classes), activation='sigmoid')(model)
 
 model = Model(input=[vgg.input], output=model)
 
-model.compile(loss='binary_crossentropy', optimizer='nadam')
+model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+
+to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2']
+for t_f in to_freeze:
+    model.get_layer(t_f).trainable = False
+
 
 check = ModelCheckpoint("weights.{epoch:02d}-{val_loss:.5f}.hdf5", monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
 early = EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=1, mode='max')
@@ -125,16 +141,11 @@ h = model.fit_generator(
     steps_per_epoch=len(x_train) / 32,
     validation_data=validation_generator.flow(x_test, y_test),
     validation_steps=len(x_test) / 32,
-    epochs=20000,
-    verbose=0,
+    epochs=200,
     callbacks=[early, check]
 )
 
 model.save("vgg_transfert_learning.h5")
-
-
-
-
 
 
 
