@@ -1,0 +1,12 @@
+*.csv
+*.pyc
+*.pyo
+*.h5
+*.hdf5
+*.zip
+*.jpg
+*.png
+*.jpeg
+*.tif
+*.tiff
+
