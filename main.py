@@ -2,7 +2,6 @@ import keras
 import keras.backend as K
 
 import os
-import cv2
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,12 +16,15 @@ from keras.layers import Dense, Conv2D, Activation, Dropout, MaxPooling2D, Globa
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-from skimage import transform, io
+import skimage
+from skimage.io import imread as bruhimread
+from skimage.transform import resize
+
 IM_SIZE = (75, 75, 3)
 
 
 def imread(path):
-    return io.imread(path)
+    return bruhimread(path)
 
 def imlabel(path):
     return path.split('/')[-2]
@@ -32,7 +34,7 @@ L = []
 im_train = glob('./train/*/*.png')
 
 for im_path in tqdm(im_train):
-    feats = transform.resize(imread(im_path), IM_SIZE)
+    feats = resize(imread(im_path), IM_SIZE)
     label = imlabel(im_path)
     L.append((feats, label))
 
@@ -77,31 +79,23 @@ vgg = VGG16(
 )
 
 
-partial_vgg = vgg.get_layer('block2_pool').output
-
-model = Conv2D(64, (3, 3), activation='elu')(partial_vgg)
-model = Conv2D(64, (3, 3), activation='elu')(model)
-model = MaxPooling2D((2, 2))(model)
-
-model = Conv2D(64, (3, 3), activation='elu')(model)
-model = Conv2D(64, (3, 3), activation='elu')(model)
-model = MaxPooling2D((2, 2))(model)
-
-model = Flatten()(model)
-
-model = Dropout(.25)(model)
-model = Dense(len(classes), activation='softmax')(model)
+partial_vgg = vgg.get_layer('block5_pool').output
+model = GlobalMaxPooling2D()(partial_vgg)
+model = Dense(len(classes), activation='sigmoid')(model)
 
 model = Model(input=[vgg.input], output=model)
 
-to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2']
-for t_f in to_freeze:
-    model.get_layer(t_f).trainable = False
+for l in model.layers[:-4]:
+    try:
+        l.trainable = False
+    except Exception:
+        pass
 
+	
 model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 
 check = ModelCheckpoint("weights.{epoch:02d}-{val_loss:.5f}.hdf5", monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
-early = EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=1, mode='auto')
+early = EarlyStopping(monitor='val_loss', patience=20, verbose=0, mode='auto')
 
 print(model.summary())
 
@@ -140,11 +134,16 @@ h = model.fit_generator(
     steps_per_epoch=len(x_train) / 32,
     validation_data=validation_generator.flow(x_test, y_test),
     validation_steps=len(x_test) / 32,
-    epochs=2000,
+    epochs=20000,
+    verbose=1,
     callbacks=[early, check]
 )
 
 model.save("vgg_transfert_learning.h5")
+
+
+
+
 
 
 
