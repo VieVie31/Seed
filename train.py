@@ -17,12 +17,12 @@ from keras.layers import Dense, Conv2D, Activation, Dropout, MaxPooling2D, Globa
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-
-IM_SIZE = (75, 75)
+from skimage import transform, io
+IM_SIZE = (75, 75, 3)
 
 
 def imread(path):
-    return cv2.imread(path)[...,::-1]
+    return io.imread(path)
 
 def imlabel(path):
     return path.split('/')[-2]
@@ -32,7 +32,7 @@ L = []
 im_train = glob('./train/*/*.png')
 
 for im_path in tqdm(im_train):
-    feats = cv2.resize(imread(im_path), IM_SIZE)
+    feats = transform.resize(imread(im_path), IM_SIZE)
     label = imlabel(im_path)
     L.append((feats, label))
 
@@ -90,19 +90,18 @@ model = MaxPooling2D((2, 2))(model)
 model = Flatten()(model)
 
 model = Dropout(.25)(model)
-model = Dense(len(classes), activation='sigmoid')(model)
+model = Dense(len(classes), activation='softmax')(model)
 
 model = Model(input=[vgg.input], output=model)
-
-model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 
 to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2']
 for t_f in to_freeze:
     model.get_layer(t_f).trainable = False
 
+model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 
 check = ModelCheckpoint("weights.{epoch:02d}-{val_loss:.5f}.hdf5", monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
-early = EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=1, mode='max')
+early = EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=1, mode='auto')
 
 print(model.summary())
 
@@ -141,12 +140,10 @@ h = model.fit_generator(
     steps_per_epoch=len(x_train) / 32,
     validation_data=validation_generator.flow(x_test, y_test),
     validation_steps=len(x_test) / 32,
-    epochs=200,
+    epochs=2000,
     callbacks=[early, check]
 )
 
 model.save("vgg_transfert_learning.h5")
-
-
 
 
