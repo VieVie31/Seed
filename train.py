@@ -17,7 +17,11 @@ from keras.layers import Dense, Conv2D, Activation, Dropout, MaxPooling2D, Globa
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
+
 from skimage import transform, io
+
+from sklearn.utils import class_weight
+
 
 IM_SIZE = (75, 75, 3)
 
@@ -39,7 +43,7 @@ for im_path in tqdm(im_train):
 x_data, x_label = zip(*L)
 
 #one hot encoding of labels
-classes = list(set(x_label))
+classes = sorted(list(set(x_label)))
 
 def one_hot(c, n):
     o = [0] * n
@@ -52,7 +56,7 @@ x_label = np.array(list(map(lambda s: one_hot_encoder[s], x_label)))
 
 
 #split data
-data = sorted(list(zip(x_data, x_label)))
+data = list(zip(x_data, x_label))
 
 shuffle(data)
 
@@ -134,9 +138,11 @@ validation_generator = ImageDataGenerator(
         zoom_range=0.2
 )
 
+cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
 
 h = model.fit_generator(
     training_generator.flow(x_train, y_train),
+    class_weight=cw,
     steps_per_epoch=len(x_train) / 32,
     validation_data=validation_generator.flow(x_test, y_test),
     validation_steps=len(x_test) / 32,
@@ -145,5 +151,3 @@ h = model.fit_generator(
 )
 
 model.save("vgg_transfert_learning.h5")
-
-
