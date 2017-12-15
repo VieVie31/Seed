@@ -14,8 +14,9 @@ from skimage import transform, io
 #use cpu for test...
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-
-IM_SIZE = (75, 75, 3)
+mean = 0.275887342968
+std = 0.127649436617
+IM_SIZE = (160, 160, 3)
 
 def imread(path):
     return io.imread(path)
@@ -28,6 +29,7 @@ for im_path in tqdm(im_test):
     L.append(feats)
 
 x_data = np.array(L)
+x_data = (x_data - mean) / std
 
 #load the classes values
 def imlabel(path):

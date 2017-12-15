@@ -17,7 +17,7 @@ from keras.preprocessing.image import ImageDataGenerator
 
 
 # Data
-im_size = (75, 75, 3)
+im_size = (160, 160, 3)
 
 def preprocess():
     """
@@ -33,7 +33,6 @@ def preprocess():
     r = data.onehot_label(y)
     print(r)
     y = list(map(lambda k: r[k], y))
-    print("Coucou !!!!!!\n\n\n\n", y[:10], "\n\n\n\nCa MARCHE PAS")
     x, m, s = data.normalize(x)
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y))
 
@@ -77,7 +76,7 @@ def build_model():
 	)
 
 
-	partial_vgg = vgg.get_layer('block2_pool').output
+	partial_vgg = vgg.get_layer('block3_pool').output
 
 	model = Conv2D(64, (3, 3), activation='elu')(partial_vgg)
 	model = Conv2D(64, (3, 3), activation='elu')(model)
@@ -94,7 +93,7 @@ def build_model():
 
 	model = Model(input=[vgg.input], output=model)
 
-	to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2']
+	to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1', 'block3_conv2', 'block3_conv3']
 	for t_f in to_freeze:
 	    model.get_layer(t_f).trainable = False
 	return model
@@ -106,6 +105,7 @@ train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preproces
 
 print(model.summary())
 # Compile
+from sklearn.metrics import f1_score
 opt = Adadelta()
 model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 
