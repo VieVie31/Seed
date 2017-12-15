@@ -2,10 +2,8 @@ import keras
 import keras.backend as K
 
 import os
-import cv2
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from glob import glob
@@ -33,7 +31,7 @@ def imlabel(path):
 
 L = []
 
-im_train = glob('./train/*/*.png')
+im_train = glob('../train/*/*.png')
 
 for im_path in tqdm(im_train):
     feats = transform.resize(imread(im_path), IM_SIZE)
@@ -151,3 +149,37 @@ h = model.fit_generator(
 )
 
 model.save("vgg_transfert_learning.h5")
+
+#plug a random forest on the CNN embeding
+model_embeding = model.layers[-3].output
+
+features_extractor = Model(input=[model.input], output=model_embeding)
+
+#make a syntethic dataset with data augmentation
+augmented_imgs, augmented_labels = [], []
+for i in tqdm(range(500)):
+    a, b = training_generator.flow(x_train, y_train).next()
+    augmented_imgs.extend(a)
+    augmented_labels.extend(b.argmax(1))
+
+augmented_imgs = np.array(augmented_imgs)
+augmented_labels = np.array(augmented_labels)
+
+augmented_feaures = features_extractor.predict(augmented_imgs)
+
+
+from sklearn.ensemble import RandomForestClassifier
+
+clf = RandomForestClassifier()
+clf.fit(augmented_feaures, augmented_labels)
+
+augmented_feaures = features_extractor.predict(x_test)
+
+
+
+
+
+
+
+
+

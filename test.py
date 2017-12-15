@@ -2,16 +2,18 @@ import keras
 import keras.backend as K
 
 import os
-import cv2
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from glob import glob
 from random import shuffle
 from collections import Counter
 from skimage import transform, io
+
+#use cpu for test...
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
 
 IM_SIZE = (75, 75, 3)
 
@@ -20,7 +22,7 @@ def imread(path):
 
 #load the test images
 L = []
-im_test = glob('./test/*.png')
+im_test = glob('../test/*.png')
 for im_path in tqdm(im_test):
     feats = transform.resize(imread(im_path), IM_SIZE)
     L.append(feats)
@@ -32,15 +34,15 @@ def imlabel(path):
     return path.split('/')[-2]
 
 L = []
-im_train = glob('./train/*/*.png')
+im_train = glob('../train/*/*.png')
 for im_path in tqdm(im_train):
     label = imlabel(im_path)
     L.append(label)
-classes = sorted(list(set(x_label)))
+classes = sorted(list(set(L)))
 
 
 #load model
-model = keras.models.load_model("best.hdf5")
+model = keras.models.load_model("vgg_transfert_learning.h5")
 
 #make prediction
 pred = model.predict(x_data)
