@@ -19,7 +19,7 @@ from keras.preprocessing.image import ImageDataGenerator
 # Data
 im_size = (75, 75, 3)
 
-def preprocess_noval():
+def preprocess():
     """
     Returns
     ------------
@@ -28,10 +28,14 @@ def preprocess_noval():
     mean for normalization
     std for normalization
     """
-    dataset = data.load("../train")
-    x, y = dataset
+    dataset = data.load("../train", im_size)
+    x, y = zip(*dataset)
+    r = data.onehot_label(y)
+    print(r)
+    y = list(map(lambda k: r[k], y))
+    print("Coucou !!!!!!\n\n\n\n", y[:10], "\n\n\n\nCa MARCHE PAS")
     x, m, s = data.normalize(x)
-    (x_train, y_train), (x_test, y_test) = data.train_val_test_split(x, y, prc_test=0.2)
+    (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y))
 
     training_generator = ImageDataGenerator(
             featurewise_center=False, 
@@ -60,7 +64,7 @@ def preprocess_noval():
             vertical_flip=True,
             zoom_range=0.2
     )
-    return training_generator.flow(x_train, y_train), test_generator.flow(x_test, y_test), m, s
+    return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
 
 # Build model
@@ -86,7 +90,7 @@ def build_model():
 	model = Flatten()(model)
 
 	model = Dropout(.25)(model)
-	model = Dense(len(classes), activation='softmax')(model)
+	model = Dense(12, activation='softmax')(model)
 
 	model = Model(input=[vgg.input], output=model)
 
@@ -96,8 +100,11 @@ def build_model():
 	return model
 
 
+# Call functions
+model = build_model()
+train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
 
-
+print(model.summary())
 # Compile
 opt = Adadelta()
 model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
@@ -107,19 +114,20 @@ from sklearn.utils import class_weight
 
 check = ModelCheckpoint("weights.{epoch:02d}-{val_loss:.5f}.hdf5", monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
 early = EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=1, mode='auto')
-cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
+#cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
 
 batch_size = 32
 
 # Fit
 h = model.fit_generator(
-    training_generator.flow(x_train, y_train),
-    class_weight=cw,
-    steps_per_epoch=len(x_train) / batch_size,
-    validation_data=validation_generator.flow(x_test, y_test),
-    validation_steps=len(x_test) / batch_size,
+    train_gen.flow(x_train, y_train),
+ #   class_weight=cw,
+#    steps_per_epoch=len(x_train) / batch_size,
+    validation_data=test_gen.flow(x_test, y_test),
+#    validation_steps=len(x_test) / batch_size,
     epochs=2000,
     callbacks=[early, check]
 )
 
+print("Mean :", mean, "Std :", std)
 model.save("vgg_transfert_learning.h5")
