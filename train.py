@@ -1,7 +1,4 @@
 import data
-
-
-
 # Now import real libs
 import numpy as np
 
@@ -17,7 +14,7 @@ from keras.preprocessing.image import ImageDataGenerator
 
 
 # Data
-im_size = (160, 160, 3)
+im_size = (224, 224, 3)
 
 def preprocess():
     """
@@ -93,7 +90,7 @@ def build_model():
 
 	model = Model(input=[vgg.input], output=model)
 
-	to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1', 'block3_conv2', 'block3_conv3']
+	to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1', 'block3_conv2', 'block3_conv3'] #, 'block4_conv1', 'block4_conv2', 'block4_conv3']
 	for t_f in to_freeze:
 	    model.get_layer(t_f).trainable = False
 	return model
@@ -102,7 +99,7 @@ def build_model():
 # Call functions
 model = build_model()
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
-
+y_train = np.asarray(y_train)
 
 print("Mean :", mean, "Std :", std)
 
@@ -119,19 +116,19 @@ from sklearn.utils import class_weight
 check = ModelCheckpoint("weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
 early = EarlyStopping(monitor='val_acc', min_delta=0, patience=20, verbose=1, mode='auto')
 #cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
-
+cw = {i: (y_train.argmax(1) == i).mean()*100 for i in range(12)}
+print(cw)
 batch_size = 32
 
 # Fit
 h = model.fit_generator(
     train_gen.flow(x_train, y_train),
- #   class_weight=cw,
-#    steps_per_epoch=len(x_train) / batch_size,
+    class_weight=cw,
+
     validation_data=test_gen.flow(x_test, y_test),
-#    validation_steps=len(x_test) / batch_size,
+
     epochs=2000,
     callbacks=[early, check]
 )
 
-print("Mean :", mean, "Std :", std)
 model.save("vgg_transfert_learning.h5")
