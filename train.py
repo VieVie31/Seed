@@ -103,6 +103,10 @@ def build_model():
 model = build_model()
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
 
+
+print("Mean :", mean, "Std :", std)
+
+
 print(model.summary())
 # Compile
 from sklearn.metrics import f1_score
@@ -112,8 +116,8 @@ model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['a
 # Prepare fit
 from sklearn.utils import class_weight
 
-check = ModelCheckpoint("weights.{epoch:02d}-{val_loss:.5f}.hdf5", monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
-early = EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=1, mode='auto')
+check = ModelCheckpoint("weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
+early = EarlyStopping(monitor='val_acc', min_delta=0, patience=20, verbose=1, mode='auto')
 #cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
 
 batch_size = 32
