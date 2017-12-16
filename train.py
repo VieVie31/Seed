@@ -14,7 +14,7 @@ from keras.preprocessing.image import ImageDataGenerator
 
 
 # Data
-im_size = (224, 224, 3)
+im_size = (160, 160, 3)
 
 def preprocess():
     """
@@ -28,7 +28,6 @@ def preprocess():
     dataset = data.load("../train", im_size)
     x, y = zip(*dataset)
     r = data.onehot_label(y)
-    print(r)
     y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y))
@@ -39,12 +38,14 @@ def preprocess():
             featurewise_std_normalization=False,
             samplewise_std_normalization=False,
             zca_whitening=False, 
-            rotation_range=180,
-            width_shift_range=.1,
-            height_shift_range=.1,
+            rotation_range=80,
+            width_shift_range=.3,
+            height_shift_range=.3,
             horizontal_flip=True,
             vertical_flip=True,
-            zoom_range=0.2
+            zoom_range=0.5,
+            shear_range=0.5,
+            fill_mode="reflect"
     )
 
     test_generator = ImageDataGenerator(
@@ -53,12 +54,12 @@ def preprocess():
             featurewise_std_normalization=False,
             samplewise_std_normalization=False,
             zca_whitening=False, 
-            rotation_range=180,
-            width_shift_range=.1,
-            height_shift_range=.1,
+            rotation_range=0,
+            width_shift_range=.0,
+            height_shift_range=.0,
             horizontal_flip=True,
             vertical_flip=True,
-            zoom_range=0.2
+            zoom_range=0.0
     )
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
@@ -100,6 +101,7 @@ def build_model():
 model = build_model()
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
 y_train = np.asarray(y_train)
+y_test = np.asarray(y_test)
 
 print("Mean :", mean, "Std :", std)
 
@@ -116,7 +118,9 @@ from sklearn.utils import class_weight
 check = ModelCheckpoint("weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
 early = EarlyStopping(monitor='val_acc', min_delta=0, patience=20, verbose=1, mode='auto')
 #cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
-cw = {i: (y_train.argmax(1) == i).mean()*100 for i in range(12)}
+cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
+tot = sum([v for v in cw.values()])
+cw = {k: v / tot * 100 for k, v in cw.items()}
 print(cw)
 batch_size = 32
 
