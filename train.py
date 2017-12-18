@@ -11,10 +11,10 @@ from keras.layers import Dense, Conv2D, Activation, Dropout, MaxPooling2D, Globa
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adadelta
 from keras.preprocessing.image import ImageDataGenerator
+from skimage import transform, io
+IM_SIZE = (75, 75, 3)
 
-
-# Data
-im_size = (160, 160, 3)
+import data
 
 def preprocess():
     """
@@ -33,11 +33,11 @@ def preprocess():
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y))
 
     training_generator = ImageDataGenerator(
-            featurewise_center=False, 
-            samplewise_center=False, 
+            featurewise_center=False,
+            samplewise_center=False,
             featurewise_std_normalization=False,
             samplewise_std_normalization=False,
-            zca_whitening=False, 
+            zca_whitening=False,
             rotation_range=80,
             width_shift_range=.3,
             height_shift_range=.3,
@@ -49,14 +49,14 @@ def preprocess():
     )
 
     test_generator = ImageDataGenerator(
-            featurewise_center=False, 
-            samplewise_center=False, 
+            featurewise_center=False,
+            samplewise_center=False,
             featurewise_std_normalization=False,
             samplewise_std_normalization=False,
-            zca_whitening=False, 
-            rotation_range=80,
-            width_shift_range=.3,
-            height_shift_range=.3,
+            zca_whitening=False,
+            rotation_range=0,
+            width_shift_range=.0,
+            height_shift_range=.0,
             horizontal_flip=True,
             vertical_flip=True,
             zoom_range=0.5,
@@ -69,34 +69,34 @@ def preprocess():
 # Build model
 from keras.applications import VGG16
 def build_model():
-	vgg = VGG16(
-	    input_shape=im_size,
-	    include_top=False,
-	    weights='imagenet'
-	)
+    vgg = VGG16(
+        input_shape=im_size,
+        include_top=False,
+        weights='imagenet'
+    )
 
 
-	partial_vgg = vgg.get_layer('block3_pool').output
+    partial_vgg = vgg.get_layer('block3_pool').output
 
-	model = Conv2D(64, (3, 3), activation='elu')(partial_vgg)
-	model = Conv2D(64, (3, 3), activation='elu')(model)
-	model = MaxPooling2D((2, 2))(model)
+    model = Conv2D(64, (3, 3), activation='elu')(partial_vgg)
+    model = Conv2D(64, (3, 3), activation='elu')(model)
+    model = MaxPooling2D((2, 2))(model)
 
-	model = Conv2D(64, (3, 3), activation='elu')(model)
-	model = Conv2D(64, (3, 3), activation='elu')(model)
-	model = MaxPooling2D((2, 2))(model)
+    model = Conv2D(64, (3, 3), activation='elu')(model)
+    model = Conv2D(64, (3, 3), activation='elu')(model)
+    model = MaxPooling2D((2, 2))(model)
 
-	model = Flatten()(model)
+    model = Flatten()(model)
 
-	model = Dropout(.25)(model)
-	model = Dense(12, activation='softmax')(model)
+    model = Dropout(.25)(model)
+    model = Dense(12, activation='softmax')(model)
 
-	model = Model(input=[vgg.input], output=model)
+    model = Model(input=[vgg.input], output=model)
 
-	to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2']#, 'block3_conv1', 'block3_conv2', 'block3_conv3'] #, 'block4_conv1', 'block4_conv2', 'block4_conv3']
-	for t_f in to_freeze:
-	    model.get_layer(t_f).trainable = False
-	return model
+    to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1', 'block3_conv2', 'block3_conv3'] #, 'block4_conv1', 'block4_conv2', 'block4_conv3']
+    for t_f in to_freeze:
+        model.get_layer(t_f).trainable = False
+    return model
 
 
 # Call functions
