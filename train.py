@@ -18,8 +18,13 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 from skimage import transform, io
+<<<<<<< HEAD
 IM_SIZE = (75, 75, 3)
 
+=======
+
+IM_SIZE = (75, 75, 3)
+>>>>>>> 6ae55e99d5a276e0d0bbebee71def06b49674292
 
 def imread(path):
     return io.imread(path)
@@ -52,7 +57,7 @@ x_label = np.array(list(map(lambda s: one_hot_encoder[s], x_label)))
 
 
 #split data
-data = list(zip(x_data, x_label))
+data = sorted(list(zip(x_data, x_label)))
 
 shuffle(data)
 
@@ -145,7 +150,5 @@ h = model.fit_generator(
 )
 
 model.save("vgg_transfert_learning.h5")
-
-
 
 
