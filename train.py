@@ -54,12 +54,14 @@ def preprocess():
             featurewise_std_normalization=False,
             samplewise_std_normalization=False,
             zca_whitening=False, 
-            rotation_range=0,
-            width_shift_range=.0,
-            height_shift_range=.0,
+            rotation_range=80,
+            width_shift_range=.3,
+            height_shift_range=.3,
             horizontal_flip=True,
             vertical_flip=True,
-            zoom_range=0.0
+            zoom_range=0.5,
+            shear_range=0.5,
+            fill_mode="reflect"
     )
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
@@ -91,7 +93,7 @@ def build_model():
 
 	model = Model(input=[vgg.input], output=model)
 
-	to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1', 'block3_conv2', 'block3_conv3'] #, 'block4_conv1', 'block4_conv2', 'block4_conv3']
+	to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2']#, 'block3_conv1', 'block3_conv2', 'block3_conv3'] #, 'block4_conv1', 'block4_conv2', 'block4_conv3']
 	for t_f in to_freeze:
 	    model.get_layer(t_f).trainable = False
 	return model
@@ -120,7 +122,7 @@ early = EarlyStopping(monitor='val_acc', min_delta=0, patience=20, verbose=1, mo
 #cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
 cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
 tot = sum([v for v in cw.values()])
-cw = {k: v / tot * 100 for k, v in cw.items()}
+cw = {k: v / tot *100 for k, v in cw.items()}
 print(cw)
 batch_size = 32
 

@@ -44,7 +44,7 @@ classes = sorted(list(set(L)))
 
 
 #load model
-model = keras.models.load_model("vgg_transfert_learning.h5")
+model = keras.models.load_model("totry.hdf5")
 
 #make prediction
 pred = model.predict(x_data)
