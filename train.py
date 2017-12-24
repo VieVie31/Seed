@@ -8,7 +8,7 @@ from keras.layers import Dense, Conv2D, Dropout, MaxPooling2D, Flatten, GlobalAv
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.optimizers import Adadelta
 from keras.preprocessing.image import ImageDataGenerator
-from keras.applications import VGG16
+from keras.applications import VGG16, InceptionResNetV2, Xception
 
 im_size = (224, 224, 3)
 
@@ -22,13 +22,12 @@ def preprocess():
     mean for normalization
     std for normalization
     """
-    dataset = data.load("./train", im_size)
+    dataset = data.load("../train", im_size)
     x, y = zip(*dataset)
     r = data.onehot_label(y)
     y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y))
-
     training_generator = ImageDataGenerator(
             featurewise_center=False,
             samplewise_center=False,
@@ -44,7 +43,6 @@ def preprocess():
             shear_range=0.5,
             fill_mode="reflect"
     )
-
     test_generator = ImageDataGenerator(
             featurewise_center=False,
             samplewise_center=False,
@@ -65,6 +63,20 @@ def preprocess():
 
 # Build model
 def build_model():
+    x_model = Xception(
+        input_shape=im_size,
+        include_top=False,
+        weights='imagenet'
+    )
+    partial_model = x_model.layers[-1].output
+    model = Conv2D(128, (3, 3), activation='elu')(partial_model)
+    model = Conv2D(128, (3, 3), activation='elu')(model)
+    model = Conv2D(128, (3, 3), activation='elu')(model)
+    model = Flatten()(model)
+    model = Dense(12, activation='softmax')(model)
+    model = Model(input=[x_model.input], output=model)
+    return model    
+"""
     vgg = VGG16(
         input_shape=im_size,
         include_top=False,
@@ -90,7 +102,7 @@ def build_model():
     for t_f in to_freeze:
         model.get_layer(t_f).trainable = False
     return model
-
+"""
 
 # Call functions
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
@@ -119,11 +131,13 @@ batch_size = 32
 h = model.fit_generator(
     train_gen.flow(x_train, y_train),
     class_weight=cw,
-
     validation_data=test_gen.flow(x_test, y_test),
-
     epochs=2000,
     callbacks=[early, check]
 )
 
-model.save("vgg_transfert_learning.h5")
+model.save("xception_transfert_learning.h5")
+
+
+
+

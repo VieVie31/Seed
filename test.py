@@ -14,9 +14,9 @@ from skimage import transform, io
 #use cpu for test...
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-mean = 0.275887342968
-std = 0.127649436617
-IM_SIZE = (160, 160, 3)
+mean = 0.275734672004
+std  = 0.12763850954
+IM_SIZE = (224, 224, 3)
 
 def imread(path):
     return io.imread(path)
@@ -44,7 +44,7 @@ classes = sorted(list(set(L)))
 
 
 #load model
-model = keras.models.load_model("totry.hdf5")
+model = keras.models.load_model("weights.08-0.95895.hdf5")
 
 #make prediction
 pred = model.predict(x_data)
