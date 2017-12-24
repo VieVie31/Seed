@@ -69,9 +69,7 @@ def build_model():
         weights='imagenet'
     )
     partial_model = x_model.layers[-1].output
-    model = Conv2D(128, (3, 3), activation='elu')(partial_model)
-    model = Conv2D(128, (3, 3), activation='elu')(model)
-    model = Conv2D(128, (3, 3), activation='elu')(model)
+    model = MaxPooling2D((7, 7))(partial_model)
     model = Flatten()(model)
     model = Dense(12, activation='softmax')(model)
     model = Model(input=[x_model.input], output=model)
