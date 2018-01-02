@@ -58,6 +58,7 @@ def preprocess():
     )
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
+
 features_extractor = keras.models.load_model("xception_fine_tunned.h5")
 features_extractor = Model(features_extractor.input, features_extractor.layers[-2].output)
 
@@ -70,16 +71,46 @@ x_train_features = features_extractor.predict(x_train)
 x_test_features  = features_extractor.predict(x_test)
 
 
+#concat the neural net prediction to the features... it could help xgboost ?
+neural_predictor = keras.models.load_model("xception_fine_tunned.h5")
+
+x_train_predictions = neural_predictor.predict(x_train)
+x_test_predictions  = neural_predictor.predict(x_test)
+
+x_train_features = np.concatenate((x_train_features, x_train_predictions), axis=1)
+x_test_features  = np.concatenate((x_test_features,  x_test_predictions),  axis=1)
+
+
+"""
+best_acc = 0
+best_model = None
+for i in [10, 20, 50, 100, 150, 200, 300, 500, 700, 1000]:
+    gbm = xgb.XGBClassifier(
+        max_depth=3,
+        n_estimators=i,
+        learning_rate=0.05
+    ).fit(x_train_features, y_train.argmax(1))
+    #the accuracy may be biaised because the feature extractor
+    #was learned with the training datas...
+    predictions = gbm.predict(x_test_features)
+    acc = (predictions == y_test.argmax(1)).mean()
+    if acc > best_acc:
+        best_model = gbm
+        best_acc = acc
+        print("--> best : ")
+    print('acc : ', acc, i)
+"""
+
+
 gbm = xgb.XGBClassifier(
     max_depth=3,
-    n_estimators=300,
+    n_estimators=700,
     learning_rate=0.05
 ).fit(x_train_features, y_train.argmax(1))
-
 #the accuracy may be biaised because the feature extractor
 #was learned with the training datas...
 predictions = gbm.predict(x_test_features)
-print('acc : ', (predictions == y_test.argmax(1)).mean())
+acc = (predictions == y_test.argmax(1)).mean()
 
 #save the xgboost model
 import pickle
@@ -124,6 +155,11 @@ classes = sorted(list(set(L)))
 
 #extract the submissions features
 x_data_features = features_extractor.predict(x_data)
+
+#concat the xception predictions to ?help? xgboost...
+x_data_predictions = neural_predictor.predict(x_data)
+x_data_features = np.concatenate((x_data_features, x_data_predictions), axis=1)
+
 
 #make the xgboost prediction
 predicted_classes = gbm.predict(x_data_features)
