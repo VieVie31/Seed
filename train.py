@@ -13,6 +13,8 @@ from keras.applications import VGG16, InceptionResNetV2, Xception
 im_size = (224, 224, 3)
 
 
+from generator import CustomImageDataGenerator
+
 def preprocess():
     """
     Returns
@@ -28,7 +30,9 @@ def preprocess():
     y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y))
-    training_generator = ImageDataGenerator(
+    training_generator = CustomImageDataGenerator(
+            x_tain[0].shape,
+            .5,
             featurewise_center=False,
             samplewise_center=False,
             featurewise_std_normalization=False,
@@ -43,7 +47,9 @@ def preprocess():
             shear_range=0.5,
             fill_mode="reflect"
     )
-    test_generator = ImageDataGenerator(
+    test_generator = CustomImageDataGenerator(
+            x_tain[0].shape,
+            .5,
             featurewise_center=False,
             samplewise_center=False,
             featurewise_std_normalization=False,
@@ -73,7 +79,7 @@ def build_model():
     model = Flatten()(model)
     model = Dense(12, activation='softmax')(model)
     model = Model(input=[x_model.input], output=model)
-    return model    
+    return model
 """
     vgg = VGG16(
         input_shape=im_size,
@@ -135,7 +141,3 @@ h = model.fit_generator(
 )
 
 model.save("xception_transfert_learning.h5")
-
-
-
-
