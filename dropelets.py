@@ -34,6 +34,7 @@ def dropout(x, proportion, cval=0, *, proportion_generator=None):
 
 def windowed_transformation(x, window_size, transformation, channel_last=, all_axes=True, **transformation_kwargs):
     temp = transformation(x, **transformation_kwargs)
+    temp.resize(x.shape)
     indices = _get_random_indices(x.shape, window_size, channel_last)
     if channel_last:
         x[np.ix_(*indices)] = temp[np.ix_(*indices)]
