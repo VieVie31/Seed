@@ -32,9 +32,8 @@ def dropout(x, proportion, cval=0, *, proportion_generator=None):
     return x
 
 
-def windowed_transformation(x, window_size, transformation, channel_last=True, **transformation_kwargs):
+def windowed_transformation(x, window_size, transformation, channel_last=, all_axes=True, **transformation_kwargs):
     temp = transformation(x, **transformation_kwargs)
-
     indices = _get_random_indices(x.shape, window_size, channel_last)
     if channel_last:
         x[np.ix_(*indices)] = temp[np.ix_(*indices)]
@@ -71,7 +70,7 @@ def gaussian(x, sigma, window_size, mode="reflect", cval=0, channel_last=True):
 
 def rotate(x, angle, axes, window_size, mode="reflect", cval=0, channel_last=True):
     return windowed_transformation(x, window_size, transform.rotate, channel_last,
-                                   angle=angle, axes=axes, mode=mode, cval=cval)
+                                   angle=angle, axes=axes, mode=mode, cval=cval, reshape=False)
 
 
 def shift(x, shift, window_size, mode="reflect", cval=0, channel_last=True):
