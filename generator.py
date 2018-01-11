@@ -1,6 +1,6 @@
 from keras.preprocessing.image import ImageDataGenerator
 import dropelets
-
+import numpy as np
 
 def random_generator_generator(min, max):
     def uniform_generator(min, max):
@@ -36,7 +36,7 @@ class CustomImageDataGenerator(ImageDataGenerator):
             x = dropelets.rotate(x, np.random.uniform(0, 360), range(len(x.shape)-1),np.int64([np.random.uniform(.05 * s, .1 * s) for s in self.shape[:-1]]))
 
         if np.random.random() < self.prob:
-            x = dropelets.zoom(x, [np.random.uniform(.8, 1.2) for i in range(len(x.shape) - 1)] + [1],np.int64([np.random.uniform(.05 * s, .1 * s) for s in self.shape[:-1]]))
+            x = dropelets.zoom(x, [np.random.uniform(.8, 1.2)]*len(x.shape[:-1]) + [1],np.int64([np.random.uniform(.05 * s, .1 * s) for s in self.shape[:-1]]))
 
         x = dropelets.dropout(x, np.random.uniform(0, .1), 0)
 
