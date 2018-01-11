@@ -31,7 +31,7 @@ def preprocess():
     x, m, s = data.normalize(x)
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y))
     training_generator = CustomImageDataGenerator(
-            x_tain[0].shape,
+            x_train[0].shape,
             .5,
             featurewise_center=False,
             samplewise_center=False,
@@ -48,7 +48,7 @@ def preprocess():
             fill_mode="reflect"
     )
     test_generator = CustomImageDataGenerator(
-            x_tain[0].shape,
+            x_train[0].shape,
             .5,
             featurewise_center=False,
             samplewise_center=False,
@@ -69,7 +69,7 @@ def preprocess():
 
 # Build model
 def build_model():
-    x_model = Xception(
+    """    x_model = Xception(
         input_shape=im_size,
         include_top=False,
         weights='imagenet'
@@ -80,7 +80,7 @@ def build_model():
     model = Dense(12, activation='softmax')(model)
     model = Model(input=[x_model.input], output=model)
     return model
-"""
+    """
     vgg = VGG16(
         input_shape=im_size,
         include_top=False,
@@ -106,7 +106,7 @@ def build_model():
     for t_f in to_freeze:
         model.get_layer(t_f).trainable = False
     return model
-"""
+
 
 # Call functions
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
