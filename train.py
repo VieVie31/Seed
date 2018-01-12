@@ -69,7 +69,7 @@ def preprocess():
 
 # Build model
 def build_model():
-    """    x_model = Xception(
+    x_model = Xception(
         input_shape=im_size,
         include_top=False,
         weights='imagenet'
@@ -106,7 +106,7 @@ def build_model():
     for t_f in to_freeze:
         model.get_layer(t_f).trainable = False
     return model
-
+    """
 
 # Call functions
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
