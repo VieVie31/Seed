@@ -4,6 +4,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 # Keras
+import keras
 from keras.models import Model
 from keras.layers import Dense, Conv2D, Dropout, MaxPooling2D, Flatten, GlobalAveragePooling2D
 from keras.callbacks import ModelCheckpoint, EarlyStopping
@@ -132,6 +133,9 @@ cw = {k: v / tot * 100 for k, v in cw.items()}
 print(cw)
 batch_size = 32
 
+
+model = keras.models.load_model("go.hdf5")
+
 # Fit
 h = model.fit_generator(
     train_gen.flow(x_train, y_train),
@@ -141,7 +145,7 @@ h = model.fit_generator(
     callbacks=[early, check],
     use_multiprocessing=True,
     workers=8,
-    max_queue_size=100
+    max_queue_size=5
 )
 
 model.save("xception_transfert_learning.h5")

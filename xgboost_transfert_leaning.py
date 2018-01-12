@@ -1,11 +1,10 @@
 import keras
 import xgboost as xgb
-
+import os
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 import data
 
@@ -59,7 +58,8 @@ def preprocess():
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
 
-features_extractor = keras.models.load_model("xception_fine_tunned.h5")
+file_learn = "go.hdf5"
+features_extractor = keras.models.load_model(file_learn)
 features_extractor = Model(features_extractor.input, features_extractor.layers[-2].output)
 
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
@@ -70,9 +70,8 @@ print("Mean :", mean, "Std :", std)
 x_train_features = features_extractor.predict(x_train)
 x_test_features  = features_extractor.predict(x_test)
 
-
 #concat the neural net prediction to the features... it could help xgboost ?
-neural_predictor = keras.models.load_model("xception_fine_tunned.h5")
+neural_predictor = keras.models.load_model(file_learn)
 
 x_train_predictions = neural_predictor.predict(x_train)
 x_test_predictions  = neural_predictor.predict(x_test)
@@ -105,6 +104,7 @@ for i in [10, 20, 50, 100, 150, 200, 300, 500, 700, 1000]:
 gbm = xgb.XGBClassifier(
     max_depth=3,
     n_estimators=700,
+    n_jobs=-1,
     learning_rate=0.05
 ).fit(x_train_features, y_train.argmax(1))
 #the accuracy may be biaised because the feature extractor
