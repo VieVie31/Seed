@@ -1,7 +1,8 @@
 import data
 # Now import real libs
 import numpy as np
-
+import warnings
+warnings.filterwarnings("ignore")
 # Keras
 from keras.models import Model
 from keras.layers import Dense, Conv2D, Dropout, MaxPooling2D, Flatten, GlobalAveragePooling2D
@@ -137,7 +138,10 @@ h = model.fit_generator(
     class_weight=cw,
     validation_data=test_gen.flow(x_test, y_test),
     epochs=2000,
-    callbacks=[early, check]
+    callbacks=[early, check],
+    use_multiprocessing=True,
+    workers=8,
+    max_queue_size=100
 )
 
 model.save("xception_transfert_learning.h5")

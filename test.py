@@ -12,7 +12,7 @@ from collections import Counter
 from skimage import transform, io
 
 #use cpu for test...
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 mean = 0.275734672004
 std  = 0.12763850954
@@ -44,7 +44,7 @@ classes = sorted(list(set(L)))
 
 
 #load model
-model = keras.models.load_model("weights.08-0.95895.hdf5")
+model = keras.models.load_model("go.hdf5")
 
 #make prediction
 pred = model.predict(x_data)
