@@ -31,7 +31,7 @@ def preprocess():
     r = data.onehot_label(y)
     y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
-    (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y))
+    (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), 42)
     training_generator = CustomImageDataGenerator(
             x_train[0].shape,
             .5,
@@ -77,8 +77,18 @@ def build_model():
         weights='imagenet'
     )
     partial_model = x_model.layers[-1].output
+    for l in x_model.layers:
+        try:
+            model.get_layer(l).trainable = False
+        except:
+            pass
     model = MaxPooling2D((7, 7))(partial_model)
     model = Flatten()(model)
+    model = Dropout(.5)(model)
+    model = Dense(512, activation="elu")(model)
+    model = Dropout(.5)(model)
+    model = Dense(512, activation="elu")(model)
+    model = Dropout(.5)(model)
     model = Dense(12, activation='softmax')(model)
     model = Model(input=[x_model.input], output=model)
     return model
@@ -120,11 +130,11 @@ model = build_model()
 print(model.summary())
 # Compile
 opt = Adadelta()
-model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+#model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 
 # Prepare fit
 
-check = ModelCheckpoint("weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
+check = ModelCheckpoint("pre-weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
 early = EarlyStopping(monitor='val_acc', min_delta=0, patience=20, verbose=1, mode='auto')
 #  cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
 cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
@@ -133,19 +143,40 @@ cw = {k: v / tot * 100 for k, v in cw.items()}
 print(cw)
 batch_size = 32
 
-
-model = keras.models.load_model("go.hdf5")
-
+"""
 # Fit
+print("PRETRAINING THE MODEL")
 h = model.fit_generator(
     train_gen.flow(x_train, y_train),
     class_weight=cw,
     validation_data=test_gen.flow(x_test, y_test),
-    epochs=2000,
-    #callbacks=[early, check],
-    use_multiprocessing=True,
-    workers=8,
-    max_queue_size=5
+    epochs=100,
+    callbacks=[early, check],
+    #use_multiprocessing=True,
+    #workers=8,
+    #max_queue_size=5
 )
+"""
+model = keras.models.load_model("pre_best.hdf5")
+# Unfreeze
+for l in model.layers:
+    try:
+        model.get_layer(l).trainable = True
+    except:
+        pass
+
+check = ModelCheckpoint("rea-weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
+print("TRAINING THE MODEL")
+h = model.fit_generator(
+    train_gen.flow(x_train, y_train),
+    class_weight=cw,
+    validation_data=test_gen.flow(x_test, y_test),
+    epochs=1000,
+    callbacks=[early, check],
+    #use_multiprocessing=True,
+    #workers=8,
+    #max_queue_size=5
+)
+
 
 model.save("xception_transfert_learning.h5")

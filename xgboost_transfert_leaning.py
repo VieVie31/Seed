@@ -59,21 +59,27 @@ def preprocess():
 
 
 file_learn = "go.hdf5"
+print("Feature extractor")
 features_extractor = keras.models.load_model(file_learn)
 features_extractor = Model(features_extractor.input, features_extractor.layers[-2].output)
 
+print("Building dataset")
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
 y_train = np.asarray(y_train)
 y_test = np.asarray(y_test)
 print("Mean :", mean, "Std :", std)
 
+print("X train feature")
 x_train_features = features_extractor.predict(x_train)
+print("X test feature")
 x_test_features  = features_extractor.predict(x_test)
 
 #concat the neural net prediction to the features... it could help xgboost ?
 neural_predictor = keras.models.load_model(file_learn)
 
+print("x train prediction")
 x_train_predictions = neural_predictor.predict(x_train)
+print("x test prediction")
 x_test_predictions  = neural_predictor.predict(x_test)
 
 x_train_features = np.concatenate((x_train_features, x_train_predictions), axis=1)
@@ -100,7 +106,7 @@ for i in [10, 20, 50, 100, 150, 200, 300, 500, 700, 1000]:
     print('acc : ', acc, i)
 """
 
-
+print("Fit xgboost")
 gbm = xgb.XGBClassifier(
     max_depth=3,
     n_estimators=700,
