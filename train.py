@@ -6,8 +6,8 @@ warnings.filterwarnings("ignore")
 # Keras
 import keras
 from keras.models import Model
-from keras.layers import Dense, Conv2D, Dropout, MaxPooling2D, Flatten, GlobalAveragePooling2D
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.layers import Dense, Conv2D, Dropout, MaxPooling2D, Flatten, GlobalAveragePooling2D, BatchNormalization
+from keras.callbacks import ModelCheckpoint, EarlyStopping, LearningRateScheduler
 from keras.optimizers import Adadelta
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import VGG16, InceptionResNetV2, Xception
@@ -31,7 +31,7 @@ def preprocess():
     r = data.onehot_label(y)
     y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
-    (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), 42)
+    (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), prc_test=.3, random_state=42)
     training_generator = CustomImageDataGenerator(
             x_train[0].shape,
             .5,
@@ -51,7 +51,7 @@ def preprocess():
     )
     test_generator = CustomImageDataGenerator(
             x_train[0].shape,
-            .5,
+            0,
             featurewise_center=False,
             samplewise_center=False,
             featurewise_std_normalization=False,
@@ -60,10 +60,10 @@ def preprocess():
             rotation_range=0,
             width_shift_range=.0,
             height_shift_range=.0,
-            horizontal_flip=True,
-            vertical_flip=True,
-            zoom_range=0.5,
-            shear_range=0.5,
+            horizontal_flip=False,
+            vertical_flip=False,
+            zoom_range=0,
+            shear_range=0,
             fill_mode="reflect"
     )
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
@@ -74,16 +74,16 @@ def build_model():
     x_model = Xception(
         input_shape=im_size,
         include_top=False,
-        weights='imagenet'
+        weights='imagenet',
+        pooling="avg"
     )
-    partial_model = x_model.layers[-1].output
+    partial_model = x_model.output
     for l in x_model.layers:
         try:
-            model.get_layer(l).trainable = False
+            x_model.get_layer(l).trainable = False
         except:
             pass
-    model = MaxPooling2D((7, 7))(partial_model)
-    model = Flatten()(model)
+    model = BatchNormalization()(partial_model)
     model = Dropout(.5)(model)
     model = Dense(512, activation="elu")(model)
     model = Dropout(.5)(model)
@@ -92,33 +92,6 @@ def build_model():
     model = Dense(12, activation='softmax')(model)
     model = Model(input=[x_model.input], output=model)
     return model
-    """
-    vgg = VGG16(
-        input_shape=im_size,
-        include_top=False,
-        weights='imagenet'
-    )
-
-    partial_vgg = vgg.get_layer('block4_pool').output
-
-    model = Conv2D(64, (3, 3), activation='elu')(partial_vgg)
-    model = Conv2D(64, (3, 3), activation='elu')(model)
-    model = MaxPooling2D((2, 2))(model)
-
-    model = Conv2D(64, (3, 3), activation='elu')(model)
-    model = Conv2D(64, (3, 3), activation='elu')(model)
-    model = GlobalAveragePooling2D()(model)
-
-    model = Dropout(.25)(model)
-    model = Dense(12, activation='softmax')(model)
-
-    model = Model(input=[vgg.input], output=model)
-
-    to_freeze = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2']#, 'block3_conv1', 'block3_conv2', 'block3_conv3']
-    for t_f in to_freeze:
-        model.get_layer(t_f).trainable = False
-    return model
-    """
 
 # Call functions
 train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
@@ -128,14 +101,10 @@ print("Mean :", mean, "Std :", std)
 
 model = build_model()
 print(model.summary())
-# Compile
-opt = Adadelta()
-#model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 
 # Prepare fit
-
 check = ModelCheckpoint("pre-weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
-early = EarlyStopping(monitor='val_acc', min_delta=0, patience=20, verbose=1, mode='auto')
+early = EarlyStopping(monitor='val_acc', min_delta=0, patience=3, verbose=1, mode='auto')
 #  cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
 cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
 tot = sum([v for v in cw.values()])
@@ -143,7 +112,9 @@ cw = {k: v / tot * 100 for k, v in cw.items()}
 print(cw)
 batch_size = 32
 
-"""
+# Compile
+model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+
 # Fit
 print("PRETRAINING THE MODEL")
 h = model.fit_generator(
@@ -152,12 +123,14 @@ h = model.fit_generator(
     validation_data=test_gen.flow(x_test, y_test),
     epochs=100,
     callbacks=[early, check],
-    #use_multiprocessing=True,
-    #workers=8,
-    #max_queue_size=5
+    use_multiprocessing=True,
+    workers=8,
+    max_queue_size=5
 )
-"""
-model = keras.models.load_model("pre_best.hdf5")
+
+with open("pre_history.txt", "w") as f:
+    f.write(str(h.history))
+
 # Unfreeze
 for l in model.layers:
     try:
@@ -165,18 +138,38 @@ for l in model.layers:
     except:
         pass
 
-check = ModelCheckpoint("rea-weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
+early = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1, mode='auto')
+check = ModelCheckpoint("rea-weights.{epoch:02d}-{val_acc:.5f}-{val_loss:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')
 print("TRAINING THE MODEL")
+
+def lr_schedule(epoch):
+    """Learning Rate Schedule
+    Learning rate is scheduled to be reduced after 80, 120epochs.
+    Called automatically every epoch as part of callbacks during training.
+    # Arguments
+        epoch (int): The number of epochs
+    # Returns
+        lr (float32): learning rate
+    """
+    lr = 1e-4
+    if epoch > 120:
+        lr *= 1e-2
+    elif epoch > 80:
+        lr *= 1e-1
+    return lr
+
+lrs = LearningRateScheduler(lr_schedule)
+
+model.compile(loss='categorical_crossentropy', optimizer=SGD(lrs(0)), metrics=['accuracy'])
 h = model.fit_generator(
     train_gen.flow(x_train, y_train),
     class_weight=cw,
     validation_data=test_gen.flow(x_test, y_test),
     epochs=1000,
-    callbacks=[early, check],
-    #use_multiprocessing=True,
-    #workers=8,
-    #max_queue_size=5
+    callbacks=[early, check, lr],
+    use_multiprocessing=True,
+    workers=8,
+    max_queue_size=5
 )
-
-
-model.save("xception_transfert_learning.h5")
+with open("pre_history.txt", "w") as f:
+    f.write(str(h.history))
