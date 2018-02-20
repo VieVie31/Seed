@@ -2,24 +2,6 @@ from keras.preprocessing.image import ImageDataGenerator
 import dropelets
 import numpy as np
 
-def random_generator_generator(min, max):
-    def uniform_generator(min, max):
-        while True:
-            yield np.random.uniform(min, max)
-    return uniform_generator(min, max)
-
-
-sigma_gen = np.random.uniform(.5, 10)
-angle_gen = np.random.uniform(0, 360)
-zoom_gen = np.random.uniform(.8, 1.2)
-drop_gen = np.random.uniform(0, .1)
-
-def window_generator_generator(shape):
-    def window_generator(shape):
-        while True:
-            yield np.int64([np.random.uniform(.05 * s, .1 * s) for s in shape[:-1]])
-    return window_generator(shape)
-
 
 class CustomImageDataGenerator(ImageDataGenerator):
     def __init__(self, image_shape, prob_transfo, *args, **kwargs):
@@ -41,3 +23,17 @@ class CustomImageDataGenerator(ImageDataGenerator):
         x = dropelets.dropout(x, np.random.uniform(0, .1), 0)
 
         return x
+
+class MultipleInputData(CustomImageDataGenerator):
+    """docstring for MultipleInputData."""
+    def __init__(self, nb, transf, *args, **kwargs):
+        super(MultipleInputData, self).__init__(*args, **kwargs)
+        self.nb = nb
+        self.transf = transf
+
+    def random_transform(self, x, seed=None):
+        X = [x]
+        for i in range(nb-1):
+            X.append(self.transf(X[-1]))
+        X = list(map(super(MultipleInputData, self).random_transform), X, [seed]*len(X))
+        return X

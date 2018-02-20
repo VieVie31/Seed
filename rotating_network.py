@@ -6,7 +6,7 @@ warnings.filterwarnings("ignore")
 # Keras
 import keras
 from keras.models import Model
-from keras.layers import Dense, Conv2D, Dropout, MaxPooling2D, Flatten, GlobalAveragePooling2D, BatchNormalization
+from keras.layers import Input, Dense, Conv2D, Dropout, MaxPooling2D, Flatten, GlobalAveragePooling2D, BatchNormalization
 from keras.callbacks import ModelCheckpoint, EarlyStopping, LearningRateScheduler
 from keras.optimizers import Adadelta
 from keras.preprocessing.image import ImageDataGenerator
@@ -15,7 +15,10 @@ from keras.applications import VGG16, InceptionResNetV2, Xception
 im_size = (224, 224, 3)
 
 
-from generator import CustomImageDataGenerator
+from generator import MultipleInputData
+
+def rotate_90(im):
+    return scipy.ndimage.rotate(im, 90)
 
 def preprocess():
     """
@@ -32,9 +35,11 @@ def preprocess():
     y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), prc_test=.3, random_state=42)
-    training_generator = CustomImageDataGenerator(
-            x_train[0].shape,
-            .5,
+    training_generator = MultipleInputData(
+            nb=4,
+            transf=rotate_90,
+            image_shape=x_train[0].shape,
+            prob_transfo=.5,
             featurewise_center=False,
             samplewise_center=False,
             featurewise_std_normalization=False,
@@ -49,9 +54,11 @@ def preprocess():
             shear_range=0.5,
             fill_mode="reflect"
     )
-    test_generator = CustomImageDataGenerator(
-            x_train[0].shape,
-            0,
+    test_generator = MultipleInputData(
+            nb=4,
+            transf=rotate_90,
+            image_shape=x_train[0].shape,
+            prob_transfo=0,
             featurewise_center=False,
             samplewise_center=False,
             featurewise_std_normalization=False,
@@ -70,39 +77,36 @@ def preprocess():
 
 
 def build_model():
-    rot0 = Xception(
+    model = Xception(
         input_shape=im_size,
         include_top=False,
         weights='imagenet',
         pooling="avg"
     )
+    model = MaxPooling2D(pool_size=(7, 7))(model)
+    model = Flatten()(model)
 
-    rot72 = Xception(
-        input_shape=im_size,
-        include_top=False,
-        weights='imagenet',
-        pooling="avg"
-    )
+    model = Model(input=[model.input], output=model.output)
 
-    rot144 = Xception(
-        input_shape=im_size,
-        include_top=False,
-        weights='imagenet',
-        pooling="avg"
-    )
+    rot0_in = Input(shape=im_size, name="rot0")
+    rot0 = model(rot0_in)
 
-    rot216 = Xception(
-        input_shape=im_size,
-        include_top=False,
-        weights='imagenet',
-        pooling="avg"
-    )
+    rot90_in = Input(shape=im_size, name="rot90")
+    rot90 = model(rot90_in)
 
-    concat = keras.layers.concatenate([rot0, rot72, rot144, rot216])
+    rot180_in = Input(shape=im_size, name="rot180")
+    rot180 = model(rot180_in)
+
+    rot270_in = Input(shape=im_size, name="rot270")
+    rot270 = model(rot270_in)
+
+    concat = keras.layers.concatenate([rot0, rot90, rot180, rot270])
     norm = BatchNormalization()(concat)
     drop = Dropout(.25)(norm)
     dense = Dense(128, activation="relu")(drop)
     drop = Dropout(.25)(dense)
-    out = Dense(12, activation="softmax")(drop)
-    model = Model(input=[rot0.input, rot72.input, rot144.input, rot216.input], output=model)
+    dense = Dense(128, activation="relu")(drop)
+    out = Dense(12, activation="softmax")(dense)
+
+    model = Model(input=[rot0.input, rot90.input, rot180.input, rot270.input], output=model)
     return model
