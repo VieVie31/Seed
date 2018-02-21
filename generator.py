@@ -24,14 +24,22 @@ class CustomImageDataGenerator(ImageDataGenerator):
 
         return x
 
-
 class RotatingGenerator(CustomImageDataGenerator):
     """docstring for MultipleInputData."""
     def __init__(self, angle, *args, **kwargs):
-        super(MultipleInputData, self).__init__(*args, **kwargs)
+        super(RotatingGenerator, self).__init__(*args, **kwargs)
         self.angle = angle
 
     def random_transform(self, x, seed=None):
         x = scipy.ndimage.rotate(im, self.angle)
         x = super(RotatingGenerator, self).random_transform(x, seed=seed)
         return x
+
+
+def multipleInputGenerator(x, y, generators):
+    gen1 = generators[0].flow(x, y)
+    gen_o = [gen.flow(x) for gen in generators[1:]]
+    while True:
+            x1 = gen1.next()
+            x_o = [gen.next() for gen in gen_o]
+            yield [x1[0]] + x_o, x1[1]

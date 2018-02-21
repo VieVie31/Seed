@@ -15,7 +15,7 @@ from keras.applications import VGG16, InceptionResNetV2, Xception
 im_size = (224, 224, 3)
 import scipy
 
-from generator import RotatingGenerator
+from generator import RotatingGenerator, multipleInputGenerator
 
 def rotate_90(im):
     return scipy.ndimage.rotate(im, 90)
@@ -59,7 +59,7 @@ def preprocess():
     ]
     test_generator = [
         MultipleInputData(
-            angle=i*90
+            angle=i*90,
             image_shape=x_train[0].shape,
             prob_transfo=0,
             featurewise_center=False,
@@ -78,6 +78,9 @@ def preprocess():
         )
         for i in range(4)
     ]
+
+    training_generator = multipleInputGenerator(x_train, y_train, training_generator)
+    test_generator = multipleInputGenerator(x_test, y_test, test_generator)
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
 
