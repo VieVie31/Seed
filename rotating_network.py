@@ -15,7 +15,7 @@ from keras.applications import VGG16, InceptionResNetV2, Xception
 im_size = (224, 224, 3)
 
 
-from generator import MultipleInputData
+from generator import RotatingGenerator
 
 def rotate_90(im):
     return scipy.ndimage.rotate(im, 90)
@@ -35,9 +35,10 @@ def preprocess():
     y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), prc_test=.3, random_state=42)
-    training_generator = MultipleInputData(
-            nb=4,
-            transf=rotate_90,
+
+    training_generator = [
+        RotatingGenerator(
+            angle=i*90,
             image_shape=x_train[0].shape,
             prob_transfo=.5,
             featurewise_center=False,
@@ -53,10 +54,12 @@ def preprocess():
             zoom_range=0.5,
             shear_range=0.5,
             fill_mode="reflect"
-    )
-    test_generator = MultipleInputData(
-            nb=4,
-            transf=rotate_90,
+        )
+        for i in range(4)
+    ]
+    test_generator = [
+        MultipleInputData(
+            angle=i*90
             image_shape=x_train[0].shape,
             prob_transfo=0,
             featurewise_center=False,
@@ -72,7 +75,9 @@ def preprocess():
             zoom_range=0,
             shear_range=0,
             fill_mode="reflect"
-    )
+        )
+        for i in range(4)
+    ]
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
 
@@ -83,8 +88,6 @@ def build_model():
         weights='imagenet',
         pooling="avg"
     )
-    model = MaxPooling2D(pool_size=(7, 7))(model)
-    model = Flatten()(model)
 
     model = Model(input=[model.input], output=model.output)
 
