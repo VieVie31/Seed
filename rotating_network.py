@@ -58,7 +58,7 @@ def preprocess():
         for i in range(4)
     ]
     test_generator = [
-        MultipleInputData(
+        RotatingGenerator(
             angle=i*90,
             image_shape=x_train[0].shape,
             prob_transfo=0,

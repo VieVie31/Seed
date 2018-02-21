@@ -40,6 +40,6 @@ def multipleInputGenerator(x, y, generators):
     gen1 = generators[0].flow(x, y)
     gen_o = [gen.flow(x) for gen in generators[1:]]
     while True:
-            x1 = gen1.next()
-            x_o = [gen.next() for gen in gen_o]
-            yield [x1[0]] + x_o, x1[1]
+        x1 = gen1.next()
+        x_o = [gen.next() for gen in gen_o]
+        yield [x1[0]] + x_o, x1[1]
