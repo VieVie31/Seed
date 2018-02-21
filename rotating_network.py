@@ -57,27 +57,7 @@ def preprocess():
         )
         for i in range(4)
     ]
-    test_generator = [
-        MultipleInputData(
-            angle=i*90
-            image_shape=x_train[0].shape,
-            prob_transfo=0,
-            featurewise_center=False,
-            samplewise_center=False,
-            featurewise_std_normalization=False,
-            samplewise_std_normalization=False,
-            zca_whitening=False,
-            rotation_range=0,
-            width_shift_range=.0,
-            height_shift_range=.0,
-            horizontal_flip=False,
-            vertical_flip=False,
-            zoom_range=0,
-            shear_range=0,
-            fill_mode="reflect"
-        )
-        for i in range(4)
-    ]
+    test_generator = ([np.asarray((x, scipy.ndimage.rotate(x, 90), scipy.ndimage.rotate(x, 180), scipy.ndimage.rotate(x, 270))) for x in x_test], [np.asarray((y, y, y, y)) for y in y_test])
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
 

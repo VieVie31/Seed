@@ -137,14 +137,15 @@ def lr_schedule(epoch):
 #reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=0.001)
 model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-4), metrics=['accuracy'])
 h = model.fit_generator(
-    train_gen.flow(x_train, y_train),
+    [gen.flow(x_train, y_train) for gen in train_gen],
     class_weight=cw,
-    validation_data=test_gen.flow(x_test, y_test),
+    validation_data=test_gen,
     epochs=1000,
     callbacks=[early, check],
     use_multiprocessing=True,
     workers=8,
-    max_queue_size=5
+    max_queue_size=5,
+    steps_per_epoch=[len(y_train)]*4
 )
 with open("pre_history.txt", "w") as f:
     f.write(str(h.history))
