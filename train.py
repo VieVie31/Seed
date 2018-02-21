@@ -8,13 +8,13 @@ import keras
 from keras.models import Model
 from keras.layers import Dense, Conv2D, Dropout, MaxPooling2D, Flatten, GlobalAveragePooling2D, BatchNormalization
 from keras.callbacks import ModelCheckpoint, EarlyStopping, LearningRateScheduler
-from keras.optimizers import Adadelta
+from keras.optimizers import Adadelta, SGD, Adam
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import VGG16, InceptionResNetV2, Xception
 
 im_size = (224, 224, 3)
 
-
+import rotating_network as rn
 from generator import CustomImageDataGenerator
 
 def preprocess():
@@ -31,7 +31,7 @@ def preprocess():
     r = data.onehot_label(y)
     y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
-    (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), prc_test=.3, random_state=42)
+    (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), prc_test=.2, random_state=42)
     training_generator = CustomImageDataGenerator(
             x_train[0].shape,
             .5,
@@ -94,17 +94,15 @@ def build_model():
     return model
 
 # Call functions
-train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
+train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = rn.preprocess()
 y_train = np.asarray(y_train)
 y_test = np.asarray(y_test)
 print("Mean :", mean, "Std :", std)
 
-model = build_model()
+model = rn.build_model()
 print(model.summary())
 
 # Prepare fit
-check = ModelCheckpoint("pre-weights.{epoch:02d}-{val_acc:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto')
-early = EarlyStopping(monitor='val_acc', min_delta=0, patience=3, verbose=1, mode='auto')
 #  cw = class_weight.compute_class_weight('balanced', np.unique(y_train.argmax(1)), y_train.argmax(1))
 cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
 tot = sum([v for v in cw.values()])
@@ -116,30 +114,8 @@ batch_size = 32
 model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 
 # Fit
-print("PRETRAINING THE MODEL")
-h = model.fit_generator(
-    train_gen.flow(x_train, y_train),
-    class_weight=cw,
-    validation_data=test_gen.flow(x_test, y_test),
-    epochs=100,
-    callbacks=[early, check],
-    use_multiprocessing=True,
-    workers=8,
-    max_queue_size=5
-)
-
-with open("pre_history.txt", "w") as f:
-    f.write(str(h.history))
-
-# Unfreeze
-for l in model.layers:
-    try:
-        model.get_layer(l).trainable = True
-    except:
-        pass
-
-early = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1, mode='auto')
-check = ModelCheckpoint("rea-weights.{epoch:02d}-{val_acc:.5f}-{val_loss:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')
+early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='auto')
+check = ModelCheckpoint("weights.{epoch:02d}-{val_acc:.5f}-{val_loss:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')
 print("TRAINING THE MODEL")
 
 def lr_schedule(epoch):
@@ -152,21 +128,20 @@ def lr_schedule(epoch):
         lr (float32): learning rate
     """
     lr = 1e-4
-    if epoch > 120:
+    if epoch > 40:
         lr *= 1e-2
-    elif epoch > 80:
+    elif epoch > 20:
         lr *= 1e-1
     return lr
 
-lrs = LearningRateScheduler(lr_schedule)
-
-model.compile(loss='categorical_crossentropy', optimizer=SGD(lrs(0)), metrics=['accuracy'])
+#reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=0.001)
+model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-4), metrics=['accuracy'])
 h = model.fit_generator(
     train_gen.flow(x_train, y_train),
     class_weight=cw,
     validation_data=test_gen.flow(x_test, y_test),
     epochs=1000,
-    callbacks=[early, check, lr],
+    callbacks=[early, check],
     use_multiprocessing=True,
     workers=8,
     max_queue_size=5

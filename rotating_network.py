@@ -13,7 +13,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import VGG16, InceptionResNetV2, Xception
 
 im_size = (224, 224, 3)
-
+import scipy
 
 from generator import MultipleInputData
 
@@ -83,8 +83,6 @@ def build_model():
         weights='imagenet',
         pooling="avg"
     )
-    model = MaxPooling2D(pool_size=(7, 7))(model)
-    model = Flatten()(model)
 
     model = Model(input=[model.input], output=model.output)
 
@@ -108,5 +106,9 @@ def build_model():
     dense = Dense(128, activation="relu")(drop)
     out = Dense(12, activation="softmax")(dense)
 
-    model = Model(input=[rot0.input, rot90.input, rot180.input, rot270.input], output=model)
+    model = Model(input=[rot0_in, rot90_in, rot180_in, rot270_in], output=out)
     return model
+
+model = build_model()
+model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['accuracy'])
+print(model.summary())

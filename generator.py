@@ -33,7 +33,7 @@ class MultipleInputData(CustomImageDataGenerator):
 
     def random_transform(self, x, seed=None):
         X = [x]
-        for i in range(nb-1):
+        for i in range(self.nb-1):
             X.append(self.transf(X[-1]))
-        X = list(map(super(MultipleInputData, self).random_transform), X, [seed]*len(X))
+        X = list(map(super(MultipleInputData, self).random_transform, X, [seed]*len(X)))
         return X
