@@ -12,7 +12,7 @@ from keras.optimizers import Adadelta, SGD, Adam
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import VGG16, InceptionResNetV2, Xception
 
-im_size = (224, 224, 3)
+im_size = (300, 300, 3)
 
 import rotating_network as rn
 from generator import CustomImageDataGenerator
@@ -26,7 +26,7 @@ def preprocess():
     mean for normalization
     std for normalization
     """
-    dataset = data.load("../train", im_size)
+    dataset = data.load("../../train", im_size)
     x, y = zip(*dataset)
     r = data.onehot_label(y)
     y = list(map(lambda k: r[k], y))
@@ -68,15 +68,36 @@ def preprocess():
     )
     return training_generator, (x_train, y_train), test_generator, (x_test, y_test), m, s
 
-
+def build_model():
+    x_model = Xception(
+        input_shape=im_size,
+        include_top=False,
+        weights='imagenet',
+        pooling="avg"
+    )
+    partial_model = x_model.output
+    for l in x_model.layers:
+        try:
+            x_model.get_layer(l).trainable = False
+        except:
+            pass
+    model = BatchNormalization()(partial_model)
+    model = Dropout(.5)(model)
+    model = Dense(512, activation="elu")(model)
+    model = Dropout(.5)(model)
+    model = Dense(512, activation="elu")(model)
+    model = Dropout(.5)(model)
+    model = Dense(12, activation='softmax')(model)
+    model = Model(input=[x_model.input], output=model)
+    return model
 
 # Call functions
-train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = rn.preprocess()
+train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preprocess()
 y_train = np.asarray(y_train)
 y_test = np.asarray(y_test)
 print("Mean :", mean, "Std :", std)
 
-model = rn.build_model()
+model = build_model()
 print(model.summary())
 
 # Prepare fit
@@ -86,26 +107,22 @@ cw = {k: v / tot * 100 for k, v in cw.items()}
 print(cw)
 batch_size = 32
 
-# Compile
-model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
-
 # Fit
 early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='auto')
 check = ModelCheckpoint("weights.{epoch:02d}-{val_acc:.5f}-{val_loss:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')
 
 print("TRAINING THE MODEL")
 
-model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-4), metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer="adadelta", metrics=['accuracy'])
 h = model.fit_generator(
-    train_gen,
+    train_gen.flow(x_train, y_train),
     class_weight=cw,
-    validation_data=test_gen,
-    epochs=1000,
+    validation_data=test_gen.flow(x_test, y_test),
+    epochs=200,
     callbacks=[early, check],
     use_multiprocessing=True,
     workers=8,
     max_queue_size=5,
-    steps_per_epoch=[len(y_train)]*4
 )
 with open("pre_history.txt", "w") as f:
     f.write(str(h.history))

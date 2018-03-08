@@ -96,6 +96,5 @@ h = model.fit_generator(
     callbacks=[early, check],
     use_multiprocessing=True,
     workers=8,
-    max_queue_size=5,
-    steps_per_epoch=[len(y_train)]*4
+    max_queue_size=5
 )
