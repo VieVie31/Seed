@@ -4,38 +4,38 @@ from keras.layers import Reshape, Dense, Input, Conv2D, Dropout, MaxPooling2D, F
 
 
 def two_class():
-    input_size = (300, 300)
-    model = Sequential([
-        Conv2D(16, (1, 1), input_shape=input_size, activation="elu"),
-        Conv2D(256, (3, 3), activation="elu"),
-        Conv2D(256, (3, 3), activation="elu"),
-        MaxPooling2D((2, 2)),
-        Conv2D(128, (3, 3), activation="elu"),
-        Conv2D(128, (3, 3), activation="elu"),
-        MaxPooling2D((2, 2)),
-        Conv2D(128, (3, 3), activation="elu"),
-        Conv2D(128, (3, 3), activation="elu"),
-        Conv2D(128, (3, 3), activation="elu"),
-        Conv2D(11, (1, 1), activation="relu")
-        Flatten(),
-        Dense(900, activation="elu"),
-        Dropout(.25),
-        Dense(900, activation="elu"),
-        Reshape((30, 30, 1)),
-        Conv2D(11, (1, 1), activation="relu"),
-        Flatten(),
-        Dense(400, activation="elu"),
-        Dropout(.25),
-        Dense(400, activation="elu"),
-        Reshape()(20, 20, 1)),
-        Conv2D(11, (1, 1), activation="relu"),
-        Dense(100, activation="elu"),
-        Dropout(.25),
-        Dense(100, activation="relu"),
-        Reshape((10, 10, 1)),
-        Conv2D(11, (1, 1), activation="relu"),
-        AveragePooling2D((2, 2)),
-        Flatten(),
-        Dense(1, activation="sigmoid")
-    ])
+    input_size = (300, 300, 3)
+    model = Input(shape=input_size)
+    model = Conv2D(16, (1, 1), input_shape=input_size, activation="elu")(model)
+    model = Conv2D(256, (3, 3), activation="elu")(model)
+    model = Conv2D(256, (3, 3), activation="elu")(model)
+    model = MaxPooling2D((3, 3))(model)
+    model = Conv2D(128, (3, 3), activation="elu")(model)
+    model = Conv2D(128, (3, 3), activation="elu")(model)
+    model = MaxPooling2D((3, 3))(model)
+    model = Conv2D(128, (3, 3), activation="elu")(model)
+    model = Conv2D(128, (3, 3), activation="elu")(model)
+    model = Conv2D(128, (3, 3), activation="elu")(model)
+    model = Conv2D(11, (1, 1), activation="relu")(model)
+    model = Flatten()(model)
+    model = Dense(900, activation="elu")(model)
+    model = Dropout(.25)(model)
+    model = Dense(900, activation="elu")(model)
+    model = Reshape((30, 30, 1))(model)
+    model = Conv2D(11, (1, 1), activation="relu")(model)
+    model = Flatten()(model)
+    model = Dense(400, activation="elu")(model)
+    model = Dropout(.25)(model)
+    model = Dense(400, activation="elu")(model)
+    model = Reshape((20, 20, 1))(model)
+    model = Conv2D(11, (1, 1), activation="relu")(model)
+    model = Flatten()(model)
+    model = Dense(100, activation="elu")(model)
+    model = Dropout(.25)(model)
+    model = Dense(100, activation="relu")(model)
+    model = Reshape((10, 10, 1))(model)
+    model = Conv2D(11, (1, 1), activation="relu")(model)
+    model = AveragePooling2D((2, 2))(model)
+    model = Flatten()(model)
+    model = Dense(12, activation="sigmoid")(model)
     return model

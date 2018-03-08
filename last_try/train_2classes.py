@@ -77,8 +77,6 @@ y_train = np.asarray(y_train)
 y_test = np.asarray(y_test)
 print("Mean :", mean, "Std :", std)
 
-model = nerwork.two_class()
-print(model.summary())
 
 # Prepare fit
 cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
@@ -86,6 +84,16 @@ tot = sum([v for v in cw.values()])
 cw = {k: v / tot * 100 for k, v in cw.items()}
 print(cw)
 
+features_extractor = keras.models.load_model("reso.h5")
+x = Dense(1, activation='tanh')(features_extractor.layers[-3].output)
+model = Model(features_extractor.input, x)
+
+#freeze all previous layers
+for lay in model.layers[:-1]:
+    try:
+        lay.trainable = False
+    except:
+        pass
 model.compile(loss='categorical_crossentropy', optimizer=Adam(), metrics=['accuracy'])
 
 h = model.fit_generator(
