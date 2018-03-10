@@ -79,7 +79,7 @@ print("Mean :", mean, "Std :", std)
 print(y_test)
 
 # Prepare fit
-cw = {i: sum([y == i for y in y_train]) + sum([y == i for y in y_test]) for i in range(2)}
+cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
 tot = sum([v for v in cw.values()])
 cw = {k: v / tot * 100 for k, v in cw.items()}
 print(cw)
