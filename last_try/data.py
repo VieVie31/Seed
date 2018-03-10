@@ -55,6 +55,14 @@ def onehot_label(labels):
     return r
 
 
+def one_label(labels):
+    l = sorted(set(labels))
+    r = {}
+    for i, c in enumerate(l):
+        r[c] = i
+    return r
+
+
 def train_val_test_split(dataset, prc_test=0.2, prc_val=0, random_state=None):
     x, y = dataset
     x = np.array(x)

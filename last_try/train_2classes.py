@@ -30,7 +30,7 @@ def preprocess():
 
     x, y = zip(*dataset)
     x, m, s = data.normalize(x)
-    r = data.onehot_label(y)
+    r = data.one_label(y)
     y = list(map(lambda k: r[k], y))
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), prc_test=.2, random_state=42)
     training_generator = CustomImageDataGenerator(
