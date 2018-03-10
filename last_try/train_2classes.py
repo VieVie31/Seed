@@ -9,7 +9,7 @@ from keras.models import Model
 from keras.callbacks import ModelCheckpoint, EarlyStopping, LearningRateScheduler
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications import VGG16, InceptionResNetV2, Xception
-
+from keras.layers import *
 im_size = (300, 300, 3)
 
 import network
@@ -29,8 +29,6 @@ def preprocess():
     dataset = data.load_specific(dirs, im_size)
 
     x, y = zip(*dataset)
-    r = data.onehot_label(y)
-    y = list(map(lambda k: r[k], y))
     x, m, s = data.normalize(x)
     (x_train, y_train), (x_test, y_test) = data.train_val_test_split((x, y), prc_test=.2, random_state=42)
     training_generator = CustomImageDataGenerator(
@@ -76,16 +74,16 @@ train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preproces
 y_train = np.asarray(y_train)
 y_test = np.asarray(y_test)
 print("Mean :", mean, "Std :", std)
-
+print(y_test)
 
 # Prepare fit
-cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
+cw = {i: sum([y == i for y in y_train]) + sum([y == i for y in y_test]) for i in range(2)}
 tot = sum([v for v in cw.values()])
 cw = {k: v / tot * 100 for k, v in cw.items()}
 print(cw)
 
 features_extractor = keras.models.load_model("reso.h5")
-x = Dense(1, activation='tanh')(features_extractor.layers[-3].output)
+x = Dense(1, name="output", activation='sigmoid')(features_extractor.layers[-3].output)
 model = Model(features_extractor.input, x)
 
 #freeze all previous layers
@@ -94,15 +92,14 @@ for lay in model.layers[:-1]:
         lay.trainable = False
     except:
         pass
-model.compile(loss='categorical_crossentropy', optimizer=Adam(), metrics=['accuracy'])
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='auto')
+check = ModelCheckpoint("weights.{epoch:02d}-{val_acc:.5f}-{val_loss:.5f}.hdf5", monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto')
 
 h = model.fit_generator(
-    train_gen,
+    train_gen.flow(x_train, y_train),
     class_weight=cw,
-    validation_data=test_gen,
-    epochs=1000,
-    callbacks=[early, check],
-    use_multiprocessing=True,
-    workers=8,
-    max_queue_size=5
+    validation_data=test_gen.flow(x_test, y_test),
+    epochs=100,
+    callbacks=[early, check]
 )

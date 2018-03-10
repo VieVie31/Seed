@@ -12,12 +12,12 @@ def load_specific(dirs, im_size):
     images = []
     imlabel = lambda path: path.split('/')[-2]
 
-    for d in dirs:
+    for i, d in enumerate(dirs):
         impath = glob(d + "/*png")
         print("Directory :", d)
-        for i tqdm(impath):
+        for i in tqdm(impath):
             f = transform.resize(io.imread(i), im_size)
-            images.append((f, imlabel(i)))
+            images.append((f, i))
     return images
 
 
