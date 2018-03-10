@@ -17,7 +17,7 @@ def load_specific(dirs, im_size):
         print("Directory :", d)
         for i in tqdm(impath):
             f = transform.resize(io.imread(i), im_size)
-            images.append((f, i))
+            images.append((f, imlabel(i)))
     return images
 
 
