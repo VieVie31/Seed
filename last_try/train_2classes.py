@@ -76,7 +76,6 @@ train_gen, (x_train, y_train), test_gen, (x_test, y_test), mean, std = preproces
 y_train = np.asarray(y_train)
 y_test = np.asarray(y_test)
 print("Mean :", mean, "Std :", std)
-print(y_test)
 
 # Prepare fit
 cw = {i: (y_train.argmax(1) == i).sum() + (y_test.argmax(1) == i).sum() for i in range(12)}
